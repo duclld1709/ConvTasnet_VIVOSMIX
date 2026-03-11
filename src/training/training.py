@@ -7,7 +7,9 @@ from dataset import VIVOSMIX, pad_collate_fn
 from loss import pit_sisnr_loss
 
 import wandb
-from tqdm import tqdm
+from tqdm.notebook import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # ==========================================
