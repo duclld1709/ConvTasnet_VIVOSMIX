@@ -92,26 +92,33 @@ class VIVOSMIX(Dataset):
 def pad_collate_fn(batch):
     # batch: list of (sample_rate, mixture[1,T], [src1[1,T], src2[1,T]])
     sample_rates, mixtures, sources_list = zip(*batch)
-
-    max_len = max(m.shape[-1] for m in mixtures)
-
+    
+    TARGET_LEN = 4 * sample_rates[0]  # 4 seconds in samples
+    
     padded_mixtures = []
     padded_sources  = []
-
+    
     for m, srcs in zip(mixtures, sources_list):
-        pad_amount = max_len - m.shape[-1]
-
-        # mixture: [1, T] → [1, max_len]
-        padded_mixtures.append(F.pad(m, (0, pad_amount)))
-
-        # srcs: list of [1, T]
-        # stack → [N_src, 1, T] → squeeze → [N_src, T] → pad → [N_src, max_len]
-        s = torch.stack(srcs, dim=0).squeeze(1)
-        padded_sources.append(F.pad(s, (0, pad_amount)))
-
-    mixtures_batch = torch.stack(padded_mixtures)  # [B, 1, max_len]
-    sources_batch  = torch.stack(padded_sources)   # [B, N_src, max_len]
-
+        T = m.shape[-1]
+        
+        if T < TARGET_LEN:
+            # Pad to TARGET_LEN
+            pad_amount = TARGET_LEN - T
+            padded_mixtures.append(F.pad(m, (0, pad_amount)))
+            s = torch.stack(srcs, dim=0).squeeze(1)
+            padded_sources.append(F.pad(s, (0, pad_amount)))
+        else:
+            # Random crop to TARGET_LEN
+            max_start = T - TARGET_LEN
+            start = random.randint(0, max_start)
+            end = start + TARGET_LEN
+            
+            padded_mixtures.append(m[..., start:end])
+            s = torch.stack(srcs, dim=0).squeeze(1)
+            padded_sources.append(s[..., start:end])
+    
+    mixtures_batch = torch.stack(padded_mixtures)  # [B, 1, TARGET_LEN]
+    sources_batch  = torch.stack(padded_sources)   # [B, N_src, TARGET_LEN]
     return mixtures_batch, sources_batch
 
 # def pad_collate_fn(batch):
