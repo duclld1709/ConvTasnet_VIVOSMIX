@@ -156,7 +156,7 @@ def main():
     print("\n===== Model Parameter Summary =====")
     
     encoder_params = count_parameters(model.encoder)
-    separator_params = count_parameters(model.separator)
+    separator_params = count_parameters(model.mask_generator)
     decoder_params = count_parameters(model.decoder)
     
     print(f"Encoder params   : {encoder_params:,}")
