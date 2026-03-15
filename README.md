@@ -1,3 +1,7 @@
+Try:
+- Dynamic Mixing
+- Freeze Encoder
+- Dropout 
 
 analyze_vivos.py -> Thực hiện quét tất cả tập train/test để thu thập thông tin về các file audio ngắn hơn 3s và silent để loại khỏi quá trình tạo dataset mixed. Kết quả được lưu vào file json.
 
