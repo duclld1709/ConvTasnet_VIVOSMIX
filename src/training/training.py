@@ -180,11 +180,11 @@ def main():
         print(f"\nInjecting dropout (p={args.dropout}) into mask_generator...")
         dropout_hooks = register_dropout_hooks(model.mask_generator, p=args.dropout)
     
-        def count_parameters(module):
-            return sum(p.numel() for p in module.parameters())
-        
-        def count_trainable_parameters(module):
-            return sum(p.numel() for p in module.parameters() if p.requires_grad)
+    def count_parameters(module):
+        return sum(p.numel() for p in module.parameters())
+    
+    def count_trainable_parameters(module):
+        return sum(p.numel() for p in module.parameters() if p.requires_grad)
     
     
     print("\n===== Model Parameter Summary =====")
