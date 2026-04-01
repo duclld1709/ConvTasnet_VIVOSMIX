@@ -28,7 +28,7 @@ def parse_args():
 
     # Dataset
     parser.add_argument("--data_root", type=str,
-                        default=r"D:\Duc_Data\Study\FPT_University_Course\SPRING26_Semester_7\SLP301\code\SpeechSeparation\source_code\data\datasets",
+                        default="data/datasets",
                         help="Root directory of the dataset")
     parser.add_argument("--num_workers", type=int, default=2, help="Number of DataLoader workers")
 

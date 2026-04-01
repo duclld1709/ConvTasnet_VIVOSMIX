@@ -2,23 +2,25 @@ import os
 import json
 import random
 import argparse
+import sys
+from pathlib import Path
 import torch
 import torchaudio
 import pyloudnorm as pyln
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from configs.audio_config import TARGET_SR, CROP_OR_PAD_MODE
+
 # ==============================
 # CONFIG
 # ==============================
-
-JSON_PATH = "logs/paired_audios/best_audio_pairs_20260311_203305.json"
-
 ROOT_TRAIN = r"data/raw/vivos/train/waves"
 ROOT_TEST = r"data/raw/vivos/test/waves"
 
 OUTPUT_DIR = "data/datasets"
-
-TARGET_SR = 8000
-MODE = "min"
 
 
 # ==============================
@@ -27,7 +29,33 @@ MODE = "min"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--create_valid", action="store_true")
+parser.add_argument(
+    "--pairs_json",
+    type=str,
+    default=None,
+    help="Path to pairs JSON file. If not set, uses latest JSON in logs/paired_audios.",
+)
 args = parser.parse_args()
+
+
+# ==============================
+# UTILITIES
+# ==============================
+
+def get_latest_json(log_dir):
+    if not os.path.isdir(log_dir):
+        raise FileNotFoundError(f"Log directory not found: {log_dir}")
+
+    candidates = [
+        os.path.join(log_dir, f)
+        for f in os.listdir(log_dir)
+        if f.lower().endswith(".json")
+    ]
+
+    if not candidates:
+        raise FileNotFoundError(f"No JSON files found in {log_dir}")
+
+    return max(candidates, key=os.path.getmtime)
 
 
 # ==============================
@@ -84,7 +112,10 @@ def create_split_dirs(split):
 
 def load_pairs():
 
-    with open(JSON_PATH, "r") as f:
+    pairs_json = args.pairs_json or get_latest_json("logs/paired_audios")
+    print(f"Using pairs JSON: {pairs_json}")
+
+    with open(pairs_json, "r") as f:
         data = json.load(f)
 
     train_pairs = data["datasets"]["train"]["pairs"]
@@ -149,7 +180,7 @@ def process_pair(pair, root_dir):
     if sr2 != TARGET_SR:
         w2 = torchaudio.transforms.Resample(sr2, TARGET_SR)(w2)
 
-    w1, w2 = crop_or_pad(w1, w2, MODE)
+    w1, w2 = crop_or_pad(w1, w2, CROP_OR_PAD_MODE)
 
     lufs1 = random.uniform(-33, -25)
     lufs2 = random.uniform(-33, -25)

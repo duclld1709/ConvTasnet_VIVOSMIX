@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import argparse
 import torchaudio
 
 from datetime import datetime
@@ -9,7 +10,6 @@ from datetime import datetime
 # Create timestamp
 # ------------------------------------------------
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-STATS_JSON = "logs/analysis_logs/unquality_audios_20260311_200849.json"
 OUTPUT_JSON = f"logs/paired_audios/best_audio_pairs_{timestamp}.json"
 os.makedirs(os.path.dirname(OUTPUT_JSON), exist_ok=True)
 
@@ -19,6 +19,39 @@ DATASETS = {
 }
 
 ITERATIONS = 100
+
+
+# ------------------------------------------------
+# ARGUMENTS
+# ------------------------------------------------
+def parse_args():
+    parser = argparse.ArgumentParser(description="Pair VIVOS audio files by similar duration")
+    parser.add_argument(
+        "--stats_json",
+        type=str,
+        default=None,
+        help="Path to JSON stats file. If not set, uses latest JSON in logs/analysis_logs.",
+    )
+    return parser.parse_args()
+
+
+# ------------------------------------------------
+# UTILITIES
+# ------------------------------------------------
+def get_latest_json(log_dir):
+    if not os.path.isdir(log_dir):
+        raise FileNotFoundError(f"Log directory not found: {log_dir}")
+
+    candidates = [
+        os.path.join(log_dir, f)
+        for f in os.listdir(log_dir)
+        if f.lower().endswith(".json")
+    ]
+
+    if not candidates:
+        raise FileNotFoundError(f"No JSON files found in {log_dir}")
+
+    return max(candidates, key=os.path.getmtime)
 
 
 # ------------------------------------------------
@@ -166,45 +199,52 @@ def find_best_pairs(audio_list):
 
 
 # ------------------------------------------------
-# MAIN
-# ------------------------------------------------
-with open(STATS_JSON, "r", encoding="utf-8") as f:
-    stats = json.load(f)
+def main():
+    args = parse_args()
 
-final_result = {}
+    stats_json = args.stats_json or get_latest_json("logs/analysis_logs")
+    print(f"Using stats JSON: {stats_json}")
 
-for split, path in DATASETS.items():
+    with open(stats_json, "r", encoding="utf-8") as f:
+        stats = json.load(f)
 
-    print("\n==============================")
-    print("Processing:", split.upper())
-    print("==============================")
+    final_result = {}
 
-    invalid_files = load_invalid_files(stats, split)
+    for split, path in DATASETS.items():
 
-    audio_list = collect_audio(path, invalid_files)
+        print("\n==============================")
+        print("Processing:", split.upper())
+        print("==============================")
 
-    print("Valid audio:", len(audio_list))
+        invalid_files = load_invalid_files(stats, split)
 
-    best_pairs, best_diff = find_best_pairs(audio_list)
+        audio_list = collect_audio(path, invalid_files)
 
-    final_result[split] = {
-        "total_pairs": len(best_pairs),
-        "total_duration_difference": best_diff,
-        "pairs": best_pairs
+        print("Valid audio:", len(audio_list))
+
+        best_pairs, best_diff = find_best_pairs(audio_list)
+
+        final_result[split] = {
+            "total_pairs": len(best_pairs),
+            "total_duration_difference": best_diff,
+            "pairs": best_pairs
+        }
+
+        print("Best duration difference:", best_diff)
+
+    # ------------------------------------------------
+    # Save
+    # ------------------------------------------------
+    result = {
+        "iterations": ITERATIONS,
+        "datasets": final_result
     }
 
-    print("Best duration difference:", best_diff)
+    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=4)
+
+    print("\nSaved to:", OUTPUT_JSON)
 
 
-# ------------------------------------------------
-# Save
-# ------------------------------------------------
-result = {
-    "iterations": ITERATIONS,
-    "datasets": final_result
-}
-
-with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-    json.dump(result, f, indent=4)
-
-print("\nSaved to:", OUTPUT_JSON)
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 from pathlib import Path
 from typing import List, Tuple, Union
 
@@ -7,6 +8,12 @@ import torch
 from torch.utils.data import Dataset
 from torchaudio.datasets.utils import _load_waveform
 import torch.nn.functional as F
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from configs.audio_config import TARGET_SR, TRAINING_CROP_SECONDS
 
 
 class VIVOSMIX(Dataset):
@@ -31,7 +38,7 @@ class VIVOSMIX(Dataset):
         root: Union[str, Path],
         subset: str = "train",
         num_speakers: int = 2,
-        sample_rate: int = 8000,
+        sample_rate: int = TARGET_SR,
     ):
         self.root = Path(root)
         self.subset = subset
@@ -94,7 +101,7 @@ def pad_collate_fn(batch):
     # batch: list of (sample_rate, mixture[1,T], [src1[1,T], src2[1,T]])
     sample_rates, mixtures, sources_list = zip(*batch)
     
-    TARGET_LEN = 4 * sample_rates[0]  # 4 seconds in samples
+    TARGET_LEN = int(TRAINING_CROP_SECONDS * sample_rates[0])
     
     padded_mixtures = []
     padded_sources  = []
